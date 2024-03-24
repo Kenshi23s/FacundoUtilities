@@ -26,11 +26,28 @@ namespace FacundoColomboMethods
 
     public static class ColomboMethods
     {
+        
+        public static bool InBetween(this float value, float lessThan, float moreThan) => value <= lessThan && value >= moreThan;
+        public static IEnumerable<Vector2> Get8Directions()
+        {
+            FList<Vector2> nums = new FList<Vector2>();
+            for (int i = -1; i < 2; i++)
+            {
+                for (int j = -1; j < 2; j++)
+                {
+                    nums += new Vector2(i, j);
+                   
+                }
+            }
+           
+            return nums;
+        }
+        
         static Dictionary<Tuple<float, int>, IEnumerable<Vector3>> PreCalculatedDirections = new();
-        public static IEnumerable<Vector3> GetSpreadDirections(float maxAngle, int dirQuantity)
+        public static IEnumerable<Vector3> GetSpreadDirections(float maxAngle, int quantity)
         {
 
-            var key = Tuple.Create(maxAngle, dirQuantity);
+            var key = Tuple.Create(maxAngle, quantity);
 
 
             if (PreCalculatedDirections.ContainsKey(key))
@@ -47,7 +64,7 @@ namespace FacundoColomboMethods
 
             float halfAngle = maxAngle / 2;
 
-            int halfDir = Mathf.Max(1, dirQuantity / 2);
+            int halfDir = Mathf.Max(1, quantity / 2);
 
             for (int i = -halfDir; i <= halfDir; i++)
             {
@@ -118,12 +135,13 @@ namespace FacundoColomboMethods
 
         //}
 
+        // ReSharper restore Unity.ExpensiveCode
         public static IEnumerator DebugPositionInXSeconds(Rigidbody2D RB, float time)
         {
 
             float z = RB.transform.position.z;
 
-            var gravity = Physics2D.gravity * RB.gravityScale * RB.mass;
+            var gravity = Physics2D.gravity * (RB.gravityScale * RB.mass);
             gravity /= 2;
 
             Vector2 initialPos = RB.position;
@@ -139,7 +157,7 @@ namespace FacundoColomboMethods
                 //var acceleration = velocity1 / Time.deltaTime;
                 float tpower = i * i;
                 var currentgravity = gravity * tpower;
-                Vector3 finalPos = initialPos + RB.velocity * i + (acceleration * tpower * 0.5f) + currentgravity;
+                Vector3 finalPos = initialPos + RB.velocity * i + (acceleration * (tpower * 0.5f)) + currentgravity;
                 list += finalPos;
             }
 
@@ -154,6 +172,19 @@ namespace FacundoColomboMethods
 
         }
         #region VectorExtension
+        
+        public static Vector3 CustomSmoothTransitionVector(this Vector3 actualPos, Vector3 from, Vector3 to, float velocity = 1, float floor = 1)
+        {
+
+            Vector3 dir = to - from;
+            dir.Normalize();
+
+            return actualPos + dir * actualPos.CustomSmoothTransitionFloat(from, to, velocity, floor);
+        }
+        public static Vector3 ProjectDirectionOnPlane(this Vector3 direction, Vector3 planeNormal)
+        {
+            return (direction - planeNormal * Vector3.Dot(direction, planeNormal)).normalized;
+        }
         public static Vector3 MultiplyComponents(this Vector3 a, Vector3 b)
         {
             return new Vector3(a.x * b.x, a.y * b.y, a.z * b.z);
@@ -321,6 +352,7 @@ namespace FacundoColomboMethods
 
         public static IEnumerable<GameObject> GetAllChildren(this IEnumerable<GameObject> parents)
         {
+
             FList<GameObject> allChildren = new();
             foreach (var item in parents)
             {
@@ -330,17 +362,14 @@ namespace FacundoColomboMethods
         }
         #endregion
         //comentario de jocha:
-        // ¿Por qué no usar Vector3.ProjectOnPlane?
-        // Ese método hace lo mismo pero no asume que el vector normal proporcionado es de longitud unitaria;
+        // ï¿½Por quï¿½ no usar Vector3.ProjectOnPlane?
+        // Ese mï¿½todo hace lo mismo pero no asume que el vector normal proporcionado es de longitud unitaria;
         // Divide el resultado por la longitud al cuadrado de la normal, que siempre es 1, por lo que no es necesario.
 
         //este metodo NO es mio, tengo que informarme bien de proyecciones en plano.
         //no me gusta copiar cosas que no termino de entender, pero lo nesecitaba para prototipar
         //tengo una nocio de porque se usa pero no lo termino de entender
-        public static Vector3 ProjectDirectionOnPlane(this Vector3 direction, Vector3 planeNormal)
-        {
-            return (direction - planeNormal * Vector3.Dot(direction, planeNormal)).normalized;
-        }
+       
         #region TriggerButtonEvents
         public static EventTrigger.Entry CreateEvent(Action method, EventTriggerType triggerType)
         {
@@ -355,14 +384,7 @@ namespace FacundoColomboMethods
             trigger.triggers.Add(CreateEvent(method, triggerType));
         }
         #endregion
-        public static Vector3 CustomSmoothTransitionVector(this Vector3 actualPos, Vector3 from, Vector3 to, float velocity = 1, float floor = 1)
-        {
-
-            Vector3 dir = to - from;
-            dir.Normalize();
-
-            return actualPos + dir * actualPos.CustomSmoothTransitionFloat(from, to, velocity, floor);
-        }
+       
 
         public static float CustomSmoothTransitionFloat(this Vector3 actualPos, Vector3 from, Vector3 to, float velocity = 1, float floor = 1)
         {
@@ -373,6 +395,13 @@ namespace FacundoColomboMethods
 
         #region CameraExtensions
         public static bool IsInCameraSight(this Camera cam, Collider target)
+        {
+            var planes = GeometryUtility.CalculateFrustumPlanes(cam);
+            //si el collider esta entre los 4 planos de la camara, devuelve verdadero
+            return GeometryUtility.TestPlanesAABB(planes, target.bounds);
+        }
+        
+        public static bool IsInCameraSight(this Camera cam, Collider2D target)
         {
             var planes = GeometryUtility.CalculateFrustumPlanes(cam);
             //si el collider esta entre los 4 planos de la camara, devuelve verdadero
@@ -481,7 +510,7 @@ namespace FacundoColomboMethods
         {
             if (col.Contains(item)) col.Remove(item);
         }
-        public static bool InBetween(this float value, float lessThan, float moreThan) => value <= lessThan && value >= moreThan;
+       
 
         public static float InverseDistanceScalar(this Vector3 pos, Vector3 target, float radius)
         {
@@ -499,6 +528,18 @@ namespace FacundoColomboMethods
                  .Select(x => x.GetComponent<T>())
                  .Where(x => x != null)
                  .ToArray();
+
+        }
+        
+        public static T[] GetItemsOFTypeAround2D<T>(this Vector2 pos, float radius)
+        {
+            List<Collider2D> col=new ();
+            Physics2D.OverlapCircle(pos, radius, new ContactFilter2D(), col);
+                
+               return col
+                .Select(x => x.GetComponent<T>())
+                .Where(x => x != null)
+                .ToArray();
 
         }
 

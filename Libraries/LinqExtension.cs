@@ -1,9 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public static class LinqExtension
 {
@@ -80,6 +78,15 @@ public static class LinqExtension
         });
     }
 
+    public static IEnumerable<T> DebugCol<T>(this IEnumerable<T> col,Func<T,string> stringGetter )
+    {
+        foreach (var item in col)
+        {
+            Debug.Log(stringGetter(item));
+            yield return item;
+        }
+    }
+    
     public static void CustomForEach<T>(this IEnumerable<T> col, Action<T> action)
     {
         if (!col.Any()) return;
@@ -96,7 +103,24 @@ public static class LinqExtension
         return col.Zip(Enumerable.Range(0, infinite), (x, y) => Tuple.Create(x, y));
     }
 
+    public static IEnumerable<TComponent> GetComponentsFromCollection<TComponent, T>(this IEnumerable<T> col) where T : MonoBehaviour
+    {
+        foreach (var item in col)
+        {
+            if (item.TryGetComponent(out TComponent x))
+                yield return x;
+            
+        }
+    }
 
+    public static IEnumerable<TComponent> GetComponentsFromCollection<TComponent>(this IEnumerable<GameObject> col) 
+    {
+        foreach (var item in col)
+        {
+            if (item.TryGetComponent(out TComponent x))
+                yield return x;
+        }
+    }
 
 
     //public static IEnumerable<T> GetRandomAmount<T>(this IEnumerable<T> col,int quantity = 1)
